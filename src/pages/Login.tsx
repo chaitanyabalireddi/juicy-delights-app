@@ -1,0 +1,194 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const Login = () => {
+  const navigate = useNavigate();
+  const { login, register: registerUser } = useAuth();
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        // Redirect based on user role
+        navigate('/');
+      } else {
+        await registerUser(name, email, phone, password);
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Logo/Header */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <span className="text-4xl">🍊</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Juicy Delights
+            </h1>
+            <p className="text-gray-600">
+              {isLogin ? 'Welcome back!' : 'Create your account'}
+            </p>
+          </div>
+
+          {/* Toggle Login/Register */}
+          <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(true);
+                setError('');
+              }}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                isLogin
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-600'
+              }`}
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(false);
+                setError('');
+              }}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                !isLogin
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-600'
+              }`}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <>
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required={!isLogin}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+919876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required={!isLogin}
+                  />
+                </div>
+              </>
+            )}
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
+              disabled={loading}
+            >
+              {loading ? (
+                'Please wait...'
+              ) : isLogin ? (
+                <>
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Register
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Demo Credentials */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600 mb-2 font-semibold">Demo Credentials:</p>
+            <p className="text-xs text-gray-500">Admin: admin@juicydelights.com / admin123</p>
+            <p className="text-xs text-gray-500">User: customer@example.com / customer123</p>
+          </div>
+
+          {/* Skip Login (for testing) */}
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700"
+          >
+            Continue as Guest
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
+

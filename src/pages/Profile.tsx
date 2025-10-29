@@ -1,12 +1,19 @@
-import { User, Settings, MapPin, CreditCard, HelpCircle, LogOut, Package, Bell } from 'lucide-react';
+import { User, Settings, MapPin, CreditCard, HelpCircle, LogOut, Package, Bell, Shield, LogIn } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNavigation from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { user, logout, isAdmin } = useAuth();
   
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const profileItems = [
     { icon: Package, label: 'My Orders', value: '3 recent orders', path: '/orders' },
     { icon: MapPin, label: 'My Addresses', value: '2 saved addresses' },
@@ -15,6 +22,14 @@ const Profile = () => {
     { icon: Settings, label: 'Settings', value: 'Preferences' },
     { icon: HelpCircle, label: 'Help & Support', value: 'Get assistance' },
   ];
+
+  // Add admin items if user is admin
+  if (isAdmin) {
+    profileItems.unshift(
+      { icon: Shield, label: 'Admin Dashboard', value: 'Manage orders & stock', path: '/admin/orders' },
+      { icon: Package, label: 'Stock Management', value: 'Update inventory', path: '/admin/stock' }
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -27,8 +42,13 @@ const Profile = () => {
             <div className="w-24 h-24 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm">
               <User className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-xl font-bold mb-2">John Doe</h2>
-            <p className="text-white/90 mb-4">john.doe@email.com</p>
+            <h2 className="text-xl font-bold mb-2">{user?.name || 'Guest User'}</h2>
+            <p className="text-white/90 mb-4">{user?.email || 'Not logged in'}</p>
+            {isAdmin && (
+              <div className="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-semibold mb-4">
+                Admin
+              </div>
+            )}
             <div className="flex items-center justify-center space-x-6 text-sm">
               <div className="text-center">
                 <p className="font-bold">12</p>
@@ -73,15 +93,30 @@ const Profile = () => {
         </div>
 
         {/* Logout Button */}
-        <div className="mt-8">
-          <Button 
-            variant="outline" 
-            className="w-full text-destructive border-destructive hover:bg-destructive hover:text-white"
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Logout
-          </Button>
-        </div>
+        {user && (
+          <div className="mt-8">
+            <Button 
+              variant="outline" 
+              className="w-full text-destructive border-destructive hover:bg-destructive hover:text-white"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5 mr-2" />
+              Logout
+            </Button>
+          </div>
+        )}
+        
+        {!user && (
+          <div className="mt-8">
+            <Button 
+              className="w-full bg-gradient-primary text-primary-foreground"
+              onClick={() => navigate('/login')}
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              Login
+            </Button>
+          </div>
+        )}
       </div>
 
       <BottomNavigation />
