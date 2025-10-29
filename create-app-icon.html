@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juicy Delights - App Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .icon-preview {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 3px solid white;
+        }
+        .download-btn {
+            background: white;
+            color: #ff6b35;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍎 Juicy Delights - App Icon Generator</h1>
+        
+        <div class="icon-preview" id="iconPreview">
+            🍎
+        </div>
+        
+        <div class="instructions">
+            <h3>📱 App Icon Preview</h3>
+            <p>This is how your app icon will look on the Play Store and user's devices.</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>🎨 Create Your App Icon</h3>
+            <div class="step">
+                <strong>Option 1: Use Online Icon Generator</strong><br>
+                • Go to <a href="https://www.canva.com" target="_blank" style="color: white;">Canva.com</a><br>
+                • Search for "app icon" templates<br>
+                • Use fruit-themed designs<br>
+                • Export as 512x512px PNG
+            </div>
+            
+            <div class="step">
+                <strong>Option 2: Use AI Icon Generator</strong><br>
+                • Go to <a href="https://www.midjourney.com" target="_blank" style="color: white;">Midjourney</a> or <a href="https://www.dalle-2.com" target="_blank" style="color: white;">DALL-E</a><br>
+                • Prompt: "App icon for fruit delivery app, simple design, orange and green colors, 512x512"<br>
+                • Download the generated image
+            </div>
+            
+            <div class="step">
+                <strong>Option 3: Use Free Icon Resources</strong><br>
+                • <a href="https://www.flaticon.com" target="_blank" style="color: white;">Flaticon.com</a> - Free fruit icons<br>
+                • <a href="https://www.iconfinder.com" target="_blank" style="color: white;">IconFinder.com</a> - Premium icons<br>
+                • Search for "fruit", "apple", "delivery" icons
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📐 Icon Requirements</h3>
+            <div class="step">
+                <strong>Size:</strong> 512x512 pixels<br>
+                <strong>Format:</strong> PNG (transparent background)<br>
+                <strong>Design:</strong> Simple, recognizable, matches your brand<br>
+                <strong>Colors:</strong> Orange (#ff6b35) and complementary colors
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>🚀 Quick Start</h3>
+            <div class="step">
+                1. Create or download your app icon (512x512px)<br>
+                2. Save as PNG file<br>
+                3. Name it "app-icon.png"<br>
+                4. Follow the Play Store deployment guide
+            </div>
+        </div>
+        
+        <button class="download-btn" onclick="downloadIcon()">
+            📥 Download Sample Icon
+        </button>
+        
+        <button class="download-btn" onclick="openGuide()">
+            📖 Open Deployment Guide
+        </button>
+    </div>
+
+    <script>
+        function downloadIcon() {
+            // Create a simple icon using canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+            gradient.addColorStop(0, '#ff6b35');
+            gradient.addColorStop(1, '#f7931e');
+            
+            // Draw background
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Add rounded corners
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 512, 512, 80);
+            ctx.fill();
+            
+            // Reset composite operation
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Add apple emoji
+            ctx.font = '200px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'white';
+            ctx.fillText('🍎', 256, 256);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = 'juicy-delights-icon.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        function openGuide() {
+            window.open('PLAYSTORE_DEPLOYMENT_GUIDE.md', '_blank');
+        }
+        
+        // Add roundRect method for older browsers
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                this.beginPath();
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.lineTo(x + width, y + height - radius);
+                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.lineTo(x + radius, y + height);
+                this.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.lineTo(x, y + radius);
+                this.quadraticCurveTo(x, y, x + radius, y);
+                this.closePath();
+            };
+        }
+    </script>
+</body>
+</html>
