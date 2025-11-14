@@ -1,14 +1,34 @@
-import { ArrowLeft, Minus, Plus, MapPin, Clock, Truck } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, MapPin, Clock, Truck, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useCart } from '@/contexts/CartContext';
+import AddressManagement from '@/components/AddressManagement';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import api from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
+
+interface SelectedAddress {
+  street: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
 
 const Cart = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useCart();
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
+  const [showAddressDialog, setShowAddressDialog] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const warehouses = [
     { id: '1', name: 'Green Valley Warehouse', address: '123 Main St', distance: '0.8 km', eta: '5-10 min' },
@@ -22,6 +42,79 @@ const Cart = () => {
 
   const removeItem = (id: string) => {
     dispatch({ type: 'REMOVE_ITEM', payload: id });
+  };
+
+  const handleAddressSelect = (address: SelectedAddress) => {
+    setSelectedAddress(address);
+    setShowAddressDialog(false);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (deliveryType === 'delivery' && !selectedAddress) {
+      toast({
+        title: 'Address Required',
+        description: 'Please select a delivery address',
+        variant: 'destructive'
+      });
+      setShowAddressDialog(true);
+      return;
+    }
+
+    if (deliveryType === 'pickup' && !selectedWarehouse) {
+      toast({
+        title: 'Pickup Location Required',
+        description: 'Please select a pickup location',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      const orderData = {
+        items: state.items.map(item => ({
+          product: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          unit: 'kg',
+          image: item.image
+        })),
+        subtotal: state.total,
+        deliveryFee: deliveryType === 'pickup' ? 10 : state.deliveryFee,
+        serviceFee: 0,
+        discount: 0,
+        total: state.total + (deliveryType === 'pickup' ? 10 : state.deliveryFee),
+        paymentMethod: 'cod',
+        deliveryType,
+        ...(deliveryType === 'delivery' && selectedAddress ? {
+          deliveryAddress: selectedAddress
+        } : {}),
+        ...(deliveryType === 'pickup' && selectedWarehouse ? {
+          pickupLocation: warehouses.find(w => w.id === selectedWarehouse)
+        } : {})
+      };
+
+      const response = await api.post('/orders', orderData, true);
+      
+      if (response.success) {
+        dispatch({ type: 'CLEAR_CART' });
+        toast({
+          title: 'Order Placed Successfully!',
+          description: 'Your order has been placed. You will pay cash on delivery.',
+        });
+        navigate('/orders');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Order Failed',
+        description: error.message || 'Failed to place order. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   const totalAmount = state.total + state.deliveryFee;
@@ -139,6 +232,49 @@ const Cart = () => {
           ))}
         </div>
 
+        {/* Delivery Address Selection */}
+        {deliveryType === 'delivery' && (
+          <div className="bg-gradient-card rounded-xl p-6 shadow-card mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-foreground">Delivery Address</h3>
+              <Button
+                onClick={() => setShowAddressDialog(true)}
+                variant="outline"
+                size="sm"
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                {selectedAddress ? 'Change' : 'Select'} Address
+              </Button>
+            </div>
+            {selectedAddress ? (
+              <div className="bg-primary/10 rounded-lg p-4 border-2 border-primary">
+                <div className="flex items-start space-x-2">
+                  <MapPin className="w-5 h-5 text-primary mt-1" />
+                  <div>
+                    <p className="font-medium text-foreground">{selectedAddress.street}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-muted/50 rounded-lg">
+                <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No address selected</p>
+                <Button
+                  onClick={() => setShowAddressDialog(true)}
+                  variant="link"
+                  size="sm"
+                  className="mt-2"
+                >
+                  Select delivery address
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Delivery/Pickup Selection */}
         <div className="bg-gradient-card rounded-xl p-6 shadow-card mb-6">
           <h3 className="text-xl font-bold text-foreground mb-4">Delivery Options</h3>
@@ -218,6 +354,28 @@ const Cart = () => {
           )}
         </div>
 
+        {/* Payment Method */}
+        <div className="bg-gradient-card rounded-xl p-6 shadow-card mb-6">
+          <h3 className="text-xl font-bold text-foreground mb-4">Payment Method</h3>
+          <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-foreground">Cash on Delivery (COD)</p>
+                <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
+              </div>
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm">✓</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3 text-center">
+            💡 Currently, we only accept Cash on Delivery
+          </p>
+        </div>
+
         {/* Price Breakdown */}
         <div className="bg-gradient-card rounded-xl p-6 shadow-card mb-24">
           <h3 className="text-xl font-bold text-foreground mb-4">Order Summary</h3>
@@ -252,15 +410,33 @@ const Cart = () => {
       {/* Proceed to Checkout Button */}
       <div className="fixed bottom-20 left-0 right-0 px-4 bg-gradient-to-t from-background via-background to-transparent pt-6">
         <button 
-          className="w-full bg-gradient-success text-success-foreground py-4 rounded-xl font-bold text-lg flex items-center justify-between shadow-hover hover:shadow-glow transition-all duration-300 transform hover:scale-[1.02] animate-pulse-glow"
-          disabled={deliveryType === 'pickup' && !selectedWarehouse}
+          onClick={handlePlaceOrder}
+          className="w-full bg-gradient-success text-success-foreground py-4 rounded-xl font-bold text-lg flex items-center justify-between shadow-hover hover:shadow-glow transition-all duration-300 transform hover:scale-[1.02] animate-pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={
+            isPlacingOrder ||
+            (deliveryType === 'pickup' && !selectedWarehouse) ||
+            (deliveryType === 'delivery' && !selectedAddress)
+          }
         >
           <span>
-            {deliveryType === 'pickup' && !selectedWarehouse ? 'SELECT PICKUP LOCATION' : 'PROCEED TO CHECKOUT'}
+            {isPlacingOrder ? 'PLACING ORDER...' : 
+             deliveryType === 'pickup' && !selectedWarehouse ? 'SELECT PICKUP LOCATION' :
+             deliveryType === 'delivery' && !selectedAddress ? 'SELECT DELIVERY ADDRESS' :
+             'PLACE ORDER (COD)'}
           </span>
           <span>₹{(state.total + (deliveryType === 'pickup' ? 10 : state.deliveryFee)).toFixed(2)}</span>
         </button>
       </div>
+
+      {/* Address Selection Dialog */}
+      <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Delivery Address</DialogTitle>
+          </DialogHeader>
+          <AddressManagement onAddressSelect={handleAddressSelect} />
+        </DialogContent>
+      </Dialog>
 
       <BottomNavigation />
     </div>

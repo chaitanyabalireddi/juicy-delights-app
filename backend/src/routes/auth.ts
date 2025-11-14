@@ -7,6 +7,8 @@ import {
   getProfile,
   updateProfile,
   addAddress,
+  updateAddress,
+  deleteAddress,
   registerSchema,
   loginSchema,
   phoneOTPSchema,
@@ -29,5 +31,7 @@ router.post('/verify-otp', validate(verifyOTPSchema), verifyPhoneOTP);
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, validate(updateProfileSchema), updateProfile);
 router.post('/address', authenticate, validate(addressSchema), addAddress);
+router.put('/address/:addressIndex', authenticate, validate(addressSchema), updateAddress);
+router.delete('/address/:addressIndex', authenticate, deleteAddress);
 
 export default router;

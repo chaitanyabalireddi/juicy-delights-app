@@ -1,8 +1,9 @@
 import { Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNavigation from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import mangoesImg from '@/assets/mangoes.jpg';
 import applesImg from '@/assets/apples.jpg';
 import strawberriesImg from '@/assets/strawberries.jpg';
@@ -10,13 +11,60 @@ import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('Delivery');
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCurrent(api.selectedScrollSnap());
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+  }, [api]);
 
   const categories = [
     { name: 'Bulk orders', icon: '📦' },
     { name: 'Exotic fruits', icon: '🥝' },
     { name: 'Gift packs', icon: '🎁' },
     { name: 'Festive Fruits', icon: '🎊' },
+  ];
+
+  const promotionalBanners = [
+    {
+      id: 1,
+      title: 'Fresh and imported Fruits',
+      discount: 'UPTO 40% OFF',
+      buttonText: 'Shop now'
+    },
+    {
+      id: 2,
+      title: 'Seasonal Specials',
+      discount: 'UPTO 50% OFF',
+      buttonText: 'Shop now'
+    },
+    {
+      id: 3,
+      title: 'Premium Fruits',
+      discount: 'UPTO 35% OFF',
+      buttonText: 'Shop now'
+    },
+    {
+      id: 4,
+      title: 'Weekend Sale',
+      discount: 'UPTO 45% OFF',
+      buttonText: 'Shop now'
+    },
+    {
+      id: 5,
+      title: 'New Arrivals',
+      discount: 'UPTO 30% OFF',
+      buttonText: 'Shop now'
+    }
   ];
 
   const seasonalSpecials = [
@@ -83,31 +131,49 @@ const Index = () => {
           />
         </div>
 
-        {/* Promotional Banner */}
-        <div className="bg-gradient-primary rounded-xl p-6 mb-6 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-xl font-bold mb-2">Fresh and imported Fruits</h2>
-            <h3 className="text-2xl font-bold mb-4">UPTO 40% OFF</h3>
-            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
-              Shop now
-            </Button>
-          </div>
-          <div className="absolute right-4 top-4 bottom-4 w-32 bg-white/10 rounded-full"></div>
-          <div className="absolute bottom-4 right-4 flex space-x-2">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white/50 rounded-full"></div>
-            <div className="w-2 h-2 bg-white/50 rounded-full"></div>
-            <div className="w-2 h-2 bg-white/50 rounded-full"></div>
-          </div>
-        </div>
+        {/* Promotional Banner Carousel */}
+        <Carousel setApi={setApi} className="mb-6">
+          <CarouselContent>
+            {promotionalBanners.map((banner) => (
+              <CarouselItem key={banner.id}>
+                <div className="bg-gradient-primary rounded-xl p-6 text-white relative overflow-hidden">
+                  <div className="relative z-10">
+                    <h2 className="text-xl font-bold mb-2">{banner.title}</h2>
+                    <h3 className="text-2xl font-bold mb-4">{banner.discount}</h3>
+                    <Button 
+                      variant="outline" 
+                      className="border-white bg-white !text-primary hover:bg-white/90 hover:!text-primary"
+                    >
+                      {banner.buttonText}
+                    </Button>
+                  </div>
+                  <div className="absolute right-4 top-4 bottom-4 w-32 bg-white/10 rounded-full"></div>
+                  {/* Indicator Dots */}
+                  <div className="absolute bottom-4 right-4 flex space-x-2">
+                    {promotionalBanners.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => api?.scrollTo(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          current === index ? 'bg-white' : 'bg-white/50'
+                        }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
 
         {/* Categories */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">Categories</h3>
+          <div className="bg-gradient-primary rounded-lg px-4 py-3 flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white">Categories</h3>
             <button 
               onClick={() => navigate('/categories')}
-              className="text-primary font-medium"
+              className="text-white font-medium hover:text-white/80"
             >
               See all
             </button>

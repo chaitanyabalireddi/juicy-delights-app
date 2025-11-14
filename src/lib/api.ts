@@ -23,17 +23,25 @@ export const api = {
       defaultHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...fetchOptions,
-      headers: defaultHeaders,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || 'Request failed');
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...fetchOptions,
+        headers: defaultHeaders,
+      });
+    } catch (networkError: any) {
+      // Network error (no internet, CORS, server down, etc.)
+      throw new Error(`Failed to fetch: ${networkError.message || 'Cannot connect to server. Please check your internet connection and ensure the backend is running.'}`);
     }
 
-    return response.json();
+    const data = await response.json().catch(() => null);
+    
+    if (!response.ok) {
+      const errorMessage = data?.message || data?.error || `Request failed with status ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return data;
   },
 
   get<T>(endpoint: string, requiresAuth = false) {

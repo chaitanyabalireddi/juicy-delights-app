@@ -42,12 +42,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response: any = await api.post('/auth/login', { email, password });
+      const response: any = await api.post('/auth/login', { email, password }, false);
 
       if (response.success && response.data) {
         const { user: userData, tokens } = response.data;
         setUser(userData);
-        const accessToken = tokens?.accessToken || tokens?.access || tokens;
+        const accessToken = tokens?.accessToken || tokens?.access || (typeof tokens === 'string' ? tokens : null);
+        
+        if (!accessToken) {
+          throw new Error('No access token received from server');
+        }
+        
         setToken(accessToken);
         localStorage.setItem('authToken', accessToken);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -55,18 +60,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(response.message || 'Login failed');
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Login failed. Please check your credentials.');
     }
   };
 
   const register = async (name: string, email: string, phone: string, password: string) => {
     try {
-      const response: any = await api.post('/auth/register', { name, email, phone, password });
+      // Ensure phone has + prefix if not present
+      let formattedPhone = phone.trim();
+      if (!formattedPhone.startsWith('+')) {
+        // If it's an Indian number starting with 0 or without +, add +91
+        if (formattedPhone.startsWith('0')) {
+          formattedPhone = '+91' + formattedPhone.substring(1);
+        } else if (formattedPhone.length === 10) {
+          formattedPhone = '+91' + formattedPhone;
+        } else {
+          formattedPhone = '+' + formattedPhone;
+        }
+      }
+
+      const response: any = await api.post('/auth/register', { 
+        name, 
+        email, 
+        phone: formattedPhone, 
+        password 
+      }, false);
 
       if (response.success && response.data) {
         const { user: userData, tokens } = response.data;
         setUser(userData);
-        const accessToken = tokens?.accessToken || tokens?.access || tokens;
+        const accessToken = tokens?.accessToken || tokens?.access || (typeof tokens === 'string' ? tokens : null);
+        
+        if (!accessToken) {
+          throw new Error('No access token received from server');
+        }
+        
         setToken(accessToken);
         localStorage.setItem('authToken', accessToken);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -74,7 +103,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(response.message || 'Registration failed');
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Registration failed');
+      console.error('Registration error:', error);
+      throw new Error(error.message || 'Registration failed. Please check your details.');
     }
   };
 

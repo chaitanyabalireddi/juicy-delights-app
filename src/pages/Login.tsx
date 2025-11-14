@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
@@ -17,6 +17,7 @@ const Login = () => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,15 @@ const Login = () => {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      console.error('Login error:', err);
+      // Better error messages
+      if (err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
+        setError('Cannot connect to server. Please check your internet connection and ensure the backend is running.');
+      } else if (err.message?.includes('401') || err.message?.includes('Invalid')) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else {
+        setError(err.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -116,11 +125,14 @@ const Login = () => {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+919876543210"
+                    placeholder="+919876543210 or 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required={!isLogin}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter with +91 or just 10 digits (e.g., 9876543210)
+                  </p>
                 </div>
               </>
             )}
@@ -139,14 +151,28 @@ const Login = () => {
 
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button

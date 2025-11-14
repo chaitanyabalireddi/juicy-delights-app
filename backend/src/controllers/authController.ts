@@ -243,6 +243,79 @@ export const addAddress = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Update address
+export const updateAddress = asyncHandler(async (req: Request, res: Response) => {
+  const { addressIndex } = req.params;
+  const { street, city, state, pincode, country, coordinates } = req.body;
+  const userId = (req as any).user._id;
+
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  const index = parseInt(addressIndex);
+  if (index < 0 || index >= user.address.length) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid address index'
+    });
+  }
+
+  user.address[index] = {
+    street,
+    city,
+    state,
+    pincode,
+    country: country || 'India',
+    coordinates
+  };
+
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'Address updated successfully',
+    data: { user }
+  });
+});
+
+// Delete address
+export const deleteAddress = asyncHandler(async (req: Request, res: Response) => {
+  const { addressIndex } = req.params;
+  const userId = (req as any).user._id;
+
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  const index = parseInt(addressIndex);
+  if (index < 0 || index >= user.address.length) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid address index'
+    });
+  }
+
+  user.address.splice(index, 1);
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'Address deleted successfully',
+    data: { user }
+  });
+});
+
 // Validation schemas
 export const registerSchema = Joi.object({
   name: Joi.string().required().min(2).max(50),

@@ -18,6 +18,7 @@ import Orders from "./pages/Orders";
 import Offers from "./pages/Offers";
 import AdminStock from "./pages/AdminStock";
 import AdminOrders from "./pages/AdminOrders";
+import TrackOrder from "./pages/TrackOrder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/search" element={<Search />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/track/:orderId" element={<TrackOrder />} />
               <Route path="/offers" element={<Offers />} />
               <Route
                 path="/admin/stock"

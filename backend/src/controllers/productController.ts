@@ -265,6 +265,102 @@ export const updateStock = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Update product details (admin only) - price, images, name, description, etc.
+export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updateData: any = {};
+
+  // Allowed fields for update
+  const allowedFields = [
+    'name', 'description', 'price', 'originalPrice', 'category', 'subcategory',
+    'images', 'badge', 'unit', 'weight', 'origin', 'season', 'isOrganic',
+    'isImported', 'isActive', 'isFeatured', 'tags'
+  ];
+
+  // Only include fields that are provided and allowed
+  allowedFields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  });
+
+  // Handle stock updates separately if provided
+  if (req.body.stock) {
+    if (req.body.stock.available !== undefined) {
+      updateData['stock.available'] = req.body.stock.available;
+    }
+    if (req.body.stock.reserved !== undefined) {
+      updateData['stock.reserved'] = req.body.stock.reserved;
+    }
+    if (req.body.stock.minThreshold !== undefined) {
+      updateData['stock.minThreshold'] = req.body.stock.minThreshold;
+    }
+  }
+
+  const product = await Product.findByIdAndUpdate(
+    id,
+    updateData,
+    { new: true, runValidators: true }
+  );
+
+  if (!product) {
+    return res.status(404).json({
+      success: false,
+      message: 'Product not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    message: 'Product updated successfully',
+    data: { product }
+  });
+});
+
+// Create new product (admin only)
+export const createProduct = asyncHandler(async (req: Request, res: Response) => {
+  const productData = req.body;
+
+  // Check if product with same name already exists
+  const existingProduct = await Product.findOne({ 
+    name: { $regex: new RegExp(`^${productData.name}$`, 'i') }
+  });
+
+  if (existingProduct) {
+    return res.status(400).json({
+      success: false,
+      message: 'Product with this name already exists'
+    });
+  }
+
+  const product = await Product.create(productData);
+
+  res.status(201).json({
+    success: true,
+    message: 'Product created successfully',
+    data: { product }
+  });
+});
+
+// Delete product (admin only)
+export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const product = await Product.findByIdAndDelete(id);
+
+  if (!product) {
+    return res.status(404).json({
+      success: false,
+      message: 'Product not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    message: 'Product deleted successfully'
+  });
+});
+
 // Validation schemas
 export const getProductsSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
@@ -286,4 +382,54 @@ export const updateStockSchema = Joi.object({
   available: Joi.number().integer().min(0).required(),
   reserved: Joi.number().integer().min(0).default(0),
   minThreshold: Joi.number().integer().min(0).default(5)
+});
+
+export const createProductSchema = Joi.object({
+  name: Joi.string().max(100).trim().required(),
+  description: Joi.string().max(500).trim().required(),
+  price: Joi.number().min(0).required(),
+  originalPrice: Joi.number().min(0),
+  category: Joi.string().valid('fruits', 'vegetables', 'dried-fruits', 'juices', 'gift-packs').required(),
+  subcategory: Joi.string().trim(),
+  images: Joi.array().items(Joi.string()).min(1).required(),
+  badge: Joi.string().valid('seasonal', 'imported', 'organic', 'sale', 'new', 'popular'),
+  unit: Joi.string().valid('kg', 'piece', 'dozen', 'pack').default('kg'),
+  weight: Joi.number().min(0),
+  origin: Joi.string().trim().required(),
+  season: Joi.array().items(Joi.string().valid('spring', 'summer', 'autumn', 'winter', 'year-round')).default(['year-round']),
+  isOrganic: Joi.boolean().default(false),
+  isImported: Joi.boolean().default(false),
+  isActive: Joi.boolean().default(true),
+  isFeatured: Joi.boolean().default(false),
+  tags: Joi.array().items(Joi.string().trim()).default([]),
+  stock: Joi.object({
+    available: Joi.number().integer().min(0).default(0),
+    reserved: Joi.number().integer().min(0).default(0),
+    minThreshold: Joi.number().integer().min(0).default(5)
+  }).default({ available: 0, reserved: 0, minThreshold: 5 })
+});
+
+export const updateProductSchema = Joi.object({
+  name: Joi.string().max(100).trim(),
+  description: Joi.string().max(500).trim(),
+  price: Joi.number().min(0),
+  originalPrice: Joi.number().min(0),
+  category: Joi.string().valid('fruits', 'vegetables', 'dried-fruits', 'juices', 'gift-packs'),
+  subcategory: Joi.string().trim(),
+  images: Joi.array().items(Joi.string()),
+  badge: Joi.string().valid('seasonal', 'imported', 'organic', 'sale', 'new', 'popular'),
+  unit: Joi.string().valid('kg', 'piece', 'dozen', 'pack'),
+  weight: Joi.number().min(0),
+  origin: Joi.string().trim(),
+  season: Joi.array().items(Joi.string().valid('spring', 'summer', 'autumn', 'winter', 'year-round')),
+  isOrganic: Joi.boolean(),
+  isImported: Joi.boolean(),
+  isActive: Joi.boolean(),
+  isFeatured: Joi.boolean(),
+  tags: Joi.array().items(Joi.string().trim()),
+  stock: Joi.object({
+    available: Joi.number().integer().min(0),
+    reserved: Joi.number().integer().min(0),
+    minThreshold: Joi.number().integer().min(0)
+  })
 });
