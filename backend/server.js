@@ -239,6 +239,81 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Create Admin Endpoint (for initial setup - use with caution!)
+app.post('/api/auth/create-admin', async (req, res) => {
+  try {
+    const { email, password, secret } = req.body;
+
+    // Simple secret check (change this in production!)
+    if (secret !== 'CREATE_ADMIN_SECRET_2024') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Update existing user to admin
+      user.role = 'admin';
+      user.isActive = true;
+      user.isVerified = true;
+      
+      // Update password
+      const hashedPassword = await bcrypt.hash(password, 12);
+      user.password = hashedPassword;
+      
+      await user.save();
+      
+      return res.json({
+        success: true,
+        message: 'User updated to admin',
+        data: {
+          email: user.email,
+          role: user.role
+        }
+      });
+    } else {
+      // Create new admin user
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      user = await User.create({
+        name: 'Admin User',
+        email,
+        phone: '+919876543210',
+        password: hashedPassword,
+        role: 'admin',
+        isActive: true,
+        isVerified: true
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Admin user created',
+        data: {
+          email: user.email,
+          role: user.role
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create admin'
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

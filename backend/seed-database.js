@@ -3,27 +3,19 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-// User Schema (simplified for seeding)
+// User Schema (matching server.js)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['customer', 'admin', 'delivery'], default: 'customer' },
+  password: { type: String, required: true, select: false },
+  role: { type: String, default: 'customer' },
   isActive: { type: Boolean, default: true },
-  isVerified: { type: Boolean, default: true },
-  address: [{
-    street: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: { type: String, default: 'India' },
-    coordinates: {
-      lat: Number,
-      lng: Number
-    }
-  }]
-}, { timestamps: true });
+  isVerified: { type: Boolean, default: false },
+  addresses: { type: Array, default: [] },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
 
 const User = mongoose.model('User', userSchema);
 
@@ -56,15 +48,7 @@ async function seedDatabase() {
       password: adminPassword,
       role: 'admin',
       isActive: true,
-      isVerified: true,
-      address: [{
-        street: '123 Admin Street',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400001',
-        country: 'India',
-        coordinates: { lat: 19.0760, lng: 72.8777 }
-      }]
+      isVerified: true
     });
 
     console.log('\n✅ Database seeded successfully!');
