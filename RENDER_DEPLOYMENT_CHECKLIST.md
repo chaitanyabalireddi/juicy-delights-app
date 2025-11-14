@@ -12,7 +12,7 @@
 3. **Configure Service:**
    - **Name:** `juicy-delights-backend` (or any name you prefer)
    - **Root Directory:** `backend` ⚠️ **IMPORTANT!**
-   - **Region:** Choose closest to you
+   - **Region:** Choose closest to you 
    - **Branch:** `main`
    - **Runtime:** `Node`
    - **Build Command:** `npm install`

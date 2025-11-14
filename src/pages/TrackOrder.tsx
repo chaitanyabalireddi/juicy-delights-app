@@ -78,7 +78,8 @@ const TrackOrder = () => {
   };
 
   const initializeSocket = () => {
-    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Remove /api from URL for Socket.IO (connects to base URL)
+    const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://fruitjet.onrender.com';
     const socket = io(SOCKET_URL);
     socketRef.current = socket;
 

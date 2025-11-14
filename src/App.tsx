@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { Capacitor } from "@capacitor/core";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,8 +26,30 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => {
+  // Initialize StatusBar for mobile apps
+  useEffect(() => {
+    const initStatusBar = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // Show status bar first
+          await StatusBar.show();
+          // Set dark icons/text (visible on light backgrounds)
+          await StatusBar.setStyle({ style: Style.Dark });
+          // Set white background
+          await StatusBar.setBackgroundColor({ color: '#ffffff' });
+          // Don't overlay webview (status bar takes its own space)
+          await StatusBar.setOverlaysWebView({ overlay: false });
+        } catch (error) {
+          console.log('StatusBar not available:', error);
+        }
+      }
+    };
+    initStatusBar();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
         <TooltipProvider>
@@ -67,6 +92,7 @@ const App = () => (
       </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

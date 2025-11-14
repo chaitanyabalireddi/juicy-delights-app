@@ -95,9 +95,9 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
-    // Check if user exists
+    // Check if user exists (case-insensitive email)
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }]
+      $or: [{ email: email.toLowerCase() }, { phone }]
     });
 
     if (existingUser) {
@@ -172,10 +172,11 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await User.findOne({ email }).select('+password');
+    // Find user (case-insensitive email search)
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
     if (!user) {
+      console.log('Login failed: User not found for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -186,6 +187,7 @@ app.post('/api/auth/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      console.log('Login failed: Invalid password for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -259,8 +261,8 @@ app.post('/api/auth/create-admin', async (req, res) => {
       });
     }
 
-    // Check if user exists
-    let user = await User.findOne({ email });
+    // Check if user exists (case-insensitive email)
+    let user = await User.findOne({ email: email.toLowerCase() });
 
     if (user) {
       // Update existing user to admin
@@ -310,6 +312,27 @@ app.post('/api/auth/create-admin', async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to create admin'
+    });
+  }
+});
+
+// Check if admin exists endpoint
+app.get('/api/auth/check-admin', async (req, res) => {
+  try {
+    const adminEmail = 'admin@juicydelights.com';
+    const admin = await User.findOne({ email: adminEmail.toLowerCase() });
+    
+    res.json({
+      success: true,
+      exists: !!admin,
+      email: adminEmail,
+      role: admin?.role || null,
+      isActive: admin?.isActive || false
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 });
