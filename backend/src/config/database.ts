@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Redis from 'redis';
+import { createClient, RedisClientType } from 'redis';
 
 const connectDB = async (): Promise<void> => {
   try {
@@ -13,17 +13,28 @@ const connectDB = async (): Promise<void> => {
   }
 };
 
-// Redis client for caching and real-time features
-export const redisClient = Redis.createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
+let redisClient: RedisClientType | null = null;
 
-redisClient.on('error', (err) => {
-  console.error('❌ Redis Client Error:', err);
-});
+try {
+  redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+  });
 
-redisClient.on('connect', () => {
-  console.log('✅ Redis connected successfully');
-});
+  redisClient.on('error', (err) => {
+    console.error('❌ Redis Client Error:', err);
+  });
+
+  redisClient.on('connect', () => {
+    console.log('✅ Redis connected successfully');
+  });
+
+  redisClient.connect().catch((err) => {
+    console.error('❌ Redis connection error:', err);
+  });
+} catch (error) {
+  console.warn('⚠️ Redis client not initialized:', error);
+}
+
+export { redisClient };
 
 export default connectDB;
