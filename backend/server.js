@@ -1,8 +1,10 @@
 const useLegacyServer = process.env.LEGACY_SIMPLE_SERVER === 'true';
 
 if (!useLegacyServer) {
+  process.env.TS_NODE_TRANSPILE_ONLY = 'true';
+  require('ts-node/register');
   require('tsconfig-paths/register');
-  module.exports = require('./dist/server.js');
+  module.exports = require('./src/server.ts');
   return;
 }
 
