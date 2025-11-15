@@ -1,16 +1,31 @@
 import twilio from 'twilio';
 import { config } from '@/config';
 
-const client = twilio(config.twilio.accountSid, config.twilio.authToken);
+let client: ReturnType<typeof twilio> | null = null;
+const hasValidTwilioConfig =
+  config.twilio.accountSid?.startsWith('AC') &&
+  !!config.twilio.authToken &&
+  !!config.twilio.phoneNumber;
+
+if (hasValidTwilioConfig) {
+  client = twilio(config.twilio.accountSid, config.twilio.authToken);
+} else {
+  console.warn('⚠️ Twilio credentials missing or invalid; SMS features disabled.');
+}
 
 export const sendSMS = async (to: string, message: string) => {
+  if (!client || !hasValidTwilioConfig) {
+    console.warn('SMS skipped: Twilio not configured.');
+    return null;
+  }
+
   try {
     const result = await client.messages.create({
       body: message,
       from: config.twilio.phoneNumber,
       to
     });
-    
+
     console.log('SMS sent:', result.sid);
     return result;
   } catch (error) {
