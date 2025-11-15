@@ -1,4 +1,3 @@
-  redisClient.connect().catch((err) => {
 import mongoose from 'mongoose';
 import { createClient, RedisClientType } from 'redis';
 
