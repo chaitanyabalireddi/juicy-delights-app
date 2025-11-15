@@ -35,7 +35,7 @@ const App = () => {
           // Show status bar first
           await StatusBar.show();
           // Set dark icons/text (visible on light backgrounds)
-          await StatusBar.setStyle({ style: Style.Dark });
+          await StatusBar.setStyle({ style: Style.Light });
           // Set white background
           await StatusBar.setBackgroundColor({ color: '#ffffff' });
           // Don't overlay webview (status bar takes its own space)

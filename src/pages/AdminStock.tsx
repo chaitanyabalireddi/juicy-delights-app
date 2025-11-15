@@ -27,6 +27,16 @@ interface Product {
   category: string;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return fallback;
+};
+
 const AdminStock = () => {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -131,10 +141,10 @@ const AdminStock = () => {
         title: 'Success',
         description: 'Product updated successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to update: ' + (error.message || 'Unknown error'),
+        description: 'Failed to update: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }
@@ -181,10 +191,10 @@ const AdminStock = () => {
         title: 'Success',
         description: 'Product created successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to create product: ' + (error.message || 'Unknown error'),
+        description: 'Failed to create product: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }
@@ -202,10 +212,10 @@ const AdminStock = () => {
         title: 'Success',
         description: 'Product deleted successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to delete product: ' + (error.message || 'Unknown error'),
+        description: 'Failed to delete product: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }

@@ -2,28 +2,45 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Package, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Package, Truck, CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
 import api from '@/lib/api';
 import Header from '@/components/Header';
+
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+  unit?: string;
+}
 
 interface Order {
   _id: string;
   orderNumber: string;
-  user: {
+  customer?: {
     name: string;
     email: string;
     phone: string;
   };
-  items: Array<{
-    product: {
-      name: string;
-    };
-    quantity: number;
-    price: number;
-  }>;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  serviceFee: number;
   total: number;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string;
+  deliveryType: 'delivery' | 'pickup';
+  deliveryAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  pickupLocation?: {
+    name: string;
+    address: string;
+  };
   createdAt: string;
 }
 
@@ -33,6 +50,29 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+
+  const statusOptions = [
+    'all',
+    'pending',
+    'confirmed',
+    'preparing',
+    'ready',
+    'out-for-delivery',
+    'delivered',
+    'cancelled'
+  ];
+
+  const statusLabels: Record<string, string> = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    'out-for-delivery': 'Out for delivery',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled',
+    refunded: 'Refunded',
+    all: 'All'
+  };
 
   useEffect(() => {
     if (!isAdmin) {
@@ -44,16 +84,16 @@ const AdminOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      // Since we don't have an admin orders endpoint, we'll try to get all orders
-      const response = await api.get<{ success: boolean; data: Order[] }>(
+      const response = await api.get<{ success: boolean; data: { orders: Order[] } }>(
         '/orders',
         true
       );
       if (response.success) {
-        const ordersData = Array.isArray(response.data) ? response.data : [];
-        setOrders(ordersData);
+        setOrders(response.data.orders || []);
+      } else {
+        setOrders([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching orders:', error);
       // Mock data for demo
       setOrders([]);
@@ -70,8 +110,9 @@ const AdminOrders = () => {
         true
       );
       await fetchOrders();
-    } catch (error: any) {
-      alert('Failed to update order: ' + (error.message || 'Unknown error'));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert('Failed to update order: ' + message);
     }
   };
 
@@ -81,9 +122,10 @@ const AdminOrders = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'confirmed':
         return 'bg-blue-100 text-blue-800';
-      case 'processing':
+      case 'preparing':
+      case 'ready':
         return 'bg-purple-100 text-purple-800';
-      case 'shipped':
+      case 'out-for-delivery':
         return 'bg-indigo-100 text-indigo-800';
       case 'delivered':
         return 'bg-green-100 text-green-800';
@@ -132,7 +174,7 @@ const AdminOrders = () => {
 
         {/* Filter Buttons */}
         <div className="flex space-x-2 mb-6 overflow-x-auto">
-          {['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered'].map((status) => (
+          {statusOptions.map((status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}
@@ -142,7 +184,7 @@ const AdminOrders = () => {
                   : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {statusLabels[status]}
             </button>
           ))}
         </div>
@@ -163,19 +205,38 @@ const AdminOrders = () => {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {order.user?.name || 'Unknown User'}
+                    {order.customer?.name || 'Unknown User'}
                   </p>
-                  <p className="text-xs text-gray-500">{order.user?.email}</p>
-                  <p className="text-xs text-gray-500">{order.user?.phone}</p>
+                  <p className="text-xs text-gray-500">{order.customer?.email}</p>
+                  <p className="text-xs text-gray-500">{order.customer?.phone}</p>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
-                    order.status
-                  )}`}
-                >
-                  {getStatusIcon(order.status)}
-                  <span>{order.status}</span>
-                </span>
+                <div className="flex flex-col items-end space-y-2">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
+                      order.status
+                    )}`}
+                  >
+                    {getStatusIcon(order.status)}
+                    <span className="capitalize">{statusLabels[order.status] || order.status}</span>
+                  </span>
+                  <Select
+                    defaultValue={order.status}
+                    onValueChange={(value) => updateOrderStatus(order._id, value)}
+                  >
+                    <SelectTrigger className="w-[180px] h-9 text-xs">
+                      <SelectValue placeholder="Update status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions
+                        .filter((status) => status !== 'all')
+                        .map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {statusLabels[status]}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="border-t border-gray-200 pt-3 mt-3">
@@ -189,36 +250,25 @@ const AdminOrders = () => {
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                  <span className="font-semibold text-gray-900">Total: ₹{order.total}</span>
-                  <div className="flex space-x-2">
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateOrderStatus(order._id, 'confirmed')}
-                          className="text-xs"
-                        >
-                          Confirm
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateOrderStatus(order._id, 'shipped')}
-                          className="text-xs"
-                        >
-                          Ship
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-xs"
-                          onClick={() => updateOrderStatus(order._id, 'delivered')}
-                        >
-                          Deliver
-                        </Button>
-                      </>
+                <div className="mt-3 space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    {order.deliveryType === 'delivery' && order.deliveryAddress ? (
+                      <span>
+                        {order.deliveryAddress.street}, {order.deliveryAddress.city}
+                      </span>
+                    ) : order.pickupLocation ? (
+                      <span>{order.pickupLocation.name} (Pickup)</span>
+                    ) : (
+                      <span>{order.deliveryType === 'pickup' ? 'Pickup order' : 'Delivery order'}</span>
                     )}
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="font-semibold text-gray-900">Total: ₹{order.total}</span>
+                    <div className="text-xs text-gray-500 text-right">
+                      Payment: {order.paymentMethod?.toUpperCase() || 'COD'} •{' '}
+                      <span className="capitalize">{order.paymentStatus}</span>
+                    </div>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">

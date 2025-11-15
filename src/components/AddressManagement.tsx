@@ -23,6 +23,16 @@ interface AddressManagementProps {
   onAddressSelect?: (address: Address, index: number) => void;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return fallback;
+};
+
 const AddressManagement = ({ onAddressSelect }: AddressManagementProps) => {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
@@ -108,10 +118,10 @@ const AddressManagement = ({ onAddressSelect }: AddressManagementProps) => {
         title: 'Success',
         description: 'Address added successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to add address: ' + (error.message || 'Unknown error'),
+        description: 'Failed to add address: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }
@@ -138,10 +148,10 @@ const AddressManagement = ({ onAddressSelect }: AddressManagementProps) => {
         title: 'Success',
         description: 'Address updated successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to update address: ' + (error.message || 'Unknown error'),
+        description: 'Failed to update address: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }
@@ -159,10 +169,10 @@ const AddressManagement = ({ onAddressSelect }: AddressManagementProps) => {
         title: 'Success',
         description: 'Address deleted successfully',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Failed to delete address: ' + (error.message || 'Unknown error'),
+        description: 'Failed to delete address: ' + getErrorMessage(error, 'Unknown error'),
         variant: 'destructive'
       });
     }

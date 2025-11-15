@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, User, Clock, CheckCircle, Package, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,12 @@ interface LocationUpdate {
   timestamp: Date;
 }
 
+interface StatusUpdate {
+  orderId: string;
+  status: string;
+  timestamp: Date;
+}
+
 const TrackOrder = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -51,6 +57,47 @@ const TrackOrder = () => {
   const socketRef = useRef<Socket | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
+  const fetchOrder = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const response = await api.get<{ success: boolean; data: { order: Order } }>(`/orders/${orderId}`, true);
+      if (response.success) {
+        setOrder(response.data.order);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch order details';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  const initializeSocket = useCallback(() => {
+    if (!orderId) return;
+    const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://fruitjet.onrender.com';
+    const socket = io(SOCKET_URL);
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Socket connected');
+      socket.emit('join-delivery', orderId);
+    });
+
+    socket.on('location-update', (data: LocationUpdate) => {
+      console.log('Location update received:', data);
+      setDeliveryLocation(data.location);
+    });
+
+    socket.on('status-update', (data: StatusUpdate) => {
+      console.log('Status update received:', data);
+      fetchOrder();
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+  }, [orderId, fetchOrder]);
+
   useEffect(() => {
     if (orderId) {
       fetchOrder();
@@ -60,50 +107,10 @@ const TrackOrder = () => {
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, [orderId]);
-
-  const fetchOrder = async () => {
-    try {
-      const response = await api.get<{ success: boolean; data: { order: Order } }>(`/orders/${orderId}`, true);
-      if (response.success) {
-        setOrder(response.data.order);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch order details');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const initializeSocket = () => {
-    // Remove /api from URL for Socket.IO (connects to base URL)
-    const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://fruitjet.onrender.com';
-    const socket = io(SOCKET_URL);
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      console.log('Socket connected');
-      if (orderId) {
-        socket.emit('join-delivery', orderId);
-      }
-    });
-
-    socket.on('location-update', (data: LocationUpdate) => {
-      console.log('Location update received:', data);
-      setDeliveryLocation(data.location);
-    });
-
-    socket.on('status-update', (data: any) => {
-      console.log('Status update received:', data);
-      fetchOrder();
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
-  };
+  }, [orderId, fetchOrder, initializeSocket]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

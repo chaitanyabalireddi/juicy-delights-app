@@ -5,6 +5,16 @@ interface FetchOptions extends RequestInit {
   requiresAuth?: boolean;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return fallback;
+};
+
 export const api = {
   async request<T>(
     endpoint: string,
@@ -29,9 +39,12 @@ export const api = {
         ...fetchOptions,
         headers: defaultHeaders,
       });
-    } catch (networkError: any) {
-      // Network error (no internet, CORS, server down, etc.)
-      throw new Error(`Failed to fetch: ${networkError.message || 'Cannot connect to server. Please check your internet connection and ensure the backend is running.'}`);
+    } catch (networkError: unknown) {
+      const message = getErrorMessage(
+        networkError,
+        'Cannot connect to server. Please check your internet connection and ensure the backend is running.'
+      );
+      throw new Error(`Failed to fetch: ${message}`);
     }
 
     const data = await response.json().catch(() => null);
@@ -48,7 +61,7 @@ export const api = {
     return this.request<T>(endpoint, { method: 'GET', requiresAuth });
   },
 
-  post<T>(endpoint: string, data?: any, requiresAuth = false) {
+  post<T>(endpoint: string, data?: unknown, requiresAuth = false) {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -56,7 +69,7 @@ export const api = {
     });
   },
 
-  put<T>(endpoint: string, data?: any, requiresAuth = false) {
+  put<T>(endpoint: string, data?: unknown, requiresAuth = false) {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(data),

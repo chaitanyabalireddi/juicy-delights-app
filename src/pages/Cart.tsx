@@ -47,6 +47,11 @@ const Cart = () => {
   const handleAddressSelect = (address: SelectedAddress) => {
     setSelectedAddress(address);
     setShowAddressDialog(false);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedCity', address.city);
+      localStorage.setItem('selectedAddressLabel', `${address.street}, ${address.city}`);
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -106,10 +111,11 @@ const Cart = () => {
         });
         navigate('/orders');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
       toast({
         title: 'Order Failed',
-        description: error.message || 'Failed to place order. Please try again.',
+        description: message,
         variant: 'destructive'
       });
     } finally {

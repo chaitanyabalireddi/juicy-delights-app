@@ -24,24 +24,31 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+
     try {
       if (isLogin) {
-        await login(email, password);
+        await login(normalizedEmail, trimmedPassword);
         // Redirect based on user role
         navigate('/');
       } else {
-        await registerUser(name, email, phone, password);
+        await registerUser(trimmedName, normalizedEmail, trimmedPhone, trimmedPassword);
         navigate('/');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
+      const message =
+        err instanceof Error ? err.message : typeof err === 'string' ? err : undefined;
       // Better error messages
-      if (err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
+      if (message?.includes('fetch') || message?.includes('Failed to fetch')) {
         setError('Cannot connect to server. Please check your internet connection and ensure the backend is running.');
-      } else if (err.message?.includes('401') || err.message?.includes('Invalid')) {
+      } else if (message?.includes('401') || message?.includes('Invalid')) {
         setError('Invalid email or password. Please check your credentials.');
       } else {
-        setError(err.message || 'Authentication failed. Please try again.');
+        setError(message || 'Authentication failed. Please try again.');
       }
     } finally {
       setLoading(false);
