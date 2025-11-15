@@ -1,3 +1,11 @@
+const useLegacyServer = process.env.LEGACY_SIMPLE_SERVER === 'true';
+
+if (!useLegacyServer) {
+  require('tsconfig-paths/register');
+  module.exports = require('./dist/server.js');
+  return;
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
