@@ -20,6 +20,9 @@ import deliveryRoutes from '@/routes/delivery';
 const app = express();
 const server = createServer(app);
 
+// Trust proxy so rate limiting & IP detection work behind Render/Heroku, etc.
+app.set('trust proxy', 1);
+
 // Initialize Socket.IO
 const io = new SocketIOServer(server, {
   cors: {

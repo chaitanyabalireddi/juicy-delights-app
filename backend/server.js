@@ -13,6 +13,9 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const server = createServer(app);
 
+// Respect proxy headers (required on Render/Heroku/etc.)
+app.set('trust proxy', 1);
+
 // Initialize Socket.IO
 const io = new SocketIOServer(server, {
   cors: {
