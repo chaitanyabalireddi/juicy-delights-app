@@ -248,8 +248,8 @@ OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ trackingId: 1 });
 
-// Pre-save middleware to generate order number
-OrderSchema.pre('save', async function(next) {
+// Ensure order number exists before validation
+OrderSchema.pre('validate', async function(next) {
   if (this.isNew && !this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
     this.orderNumber = `JD${String(count + 1).padStart(6, '0')}`;
