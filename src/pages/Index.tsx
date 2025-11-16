@@ -22,9 +22,11 @@ interface Product {
 }
 
 interface CategorySummary {
+  _id: string;
   name: string;
-  count: number;
-  subcategories?: string[];
+  slug: string;
+  description?: string;
+  icon?: string;
 }
 
 const FALLBACK_IMAGE = '/placeholder.svg';
@@ -81,7 +83,7 @@ const Index = () => {
     const fetchCategories = async () => {
       try {
         setIsLoadingCategories(true);
-        const response = await api.get<{ success: boolean; data?: { categories: CategorySummary[] } }>('/products/categories');
+        const response = await api.get<{ success: boolean; data?: { categories: CategorySummary[] } }>('/categories');
         const fetchedCategories = response?.data?.categories || [];
         setCategorySummaries(fetchedCategories);
         setCategoryError(null);
@@ -252,15 +254,15 @@ const Index = () => {
               </p>
             ) : (
               categoriesToDisplay.map((category, index) => (
-                <div key={`${category.name}-${index}`} className="flex flex-col items-center min-w-[100px]">
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg font-semibold text-primary mb-2 shadow-sm">
-                    {category.name.charAt(0).toUpperCase()}
+                <div key={`${category.slug}-${index}`} className="flex flex-col items-center min-w-[100px]">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center text-2xl font-semibold text-primary mb-2 shadow-sm">
+                    {category.icon || category.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-xs text-center text-gray-700 font-medium">
                     {category.name}
                   </span>
                   <span className="text-[11px] text-gray-500">
-                    {category.count} items
+                    {category.description?.slice(0, 28) || 'Tap to explore'}
                   </span>
                 </div>
               ))

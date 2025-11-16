@@ -1,4 +1,4 @@
-import { User, Settings, MapPin, CreditCard, HelpCircle, LogOut, Package, Bell, Shield, LogIn, Building2 } from 'lucide-react';
+import { User, Settings, MapPin, CreditCard, HelpCircle, LogOut, Package, Bell, Shield, LogIn, Building2, Layers } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNavigation from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const Profile = () => {
     profileItems.unshift(
       { icon: Shield, label: 'Admin Dashboard', value: 'Manage orders & stock', path: '/admin/orders' },
       { icon: Package, label: 'Stock Management', value: 'Update inventory', path: '/admin/stock' },
+      { icon: Layers, label: 'Categories', value: 'Create & edit categories', path: '/admin/categories' },
       { icon: Building2, label: 'Pickup Warehouses', value: 'Manage pickup locations', path: '/admin/warehouses' }
     );
   }

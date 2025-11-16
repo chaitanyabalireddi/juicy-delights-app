@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Product from '@/models/Product';
+import Category from '@/models/Category';
 import { asyncHandler } from '@/middleware/errorHandler';
 import Joi from 'joi';
 
@@ -297,6 +298,22 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
     }
   }
 
+  if (req.body.category) {
+    const category = await Category.findOne({
+      $or: [
+        { slug: req.body.category.toLowerCase() },
+        { name: { $regex: new RegExp(`^${req.body.category}$`, 'i') } }
+      ]
+    });
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected category does not exist'
+      });
+    }
+    updateData.category = category.slug;
+  }
+
   const product = await Product.findByIdAndUpdate(
     id,
     updateData,
@@ -320,6 +337,29 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
 // Create new product (admin only)
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const productData = req.body;
+
+  if (!productData.category) {
+    return res.status(400).json({
+      success: false,
+      message: 'Category is required'
+    });
+  }
+
+  const category = await Category.findOne({
+    $or: [
+      { slug: productData.category.toLowerCase() },
+      { name: { $regex: new RegExp(`^${productData.category}$`, 'i') } }
+    ]
+  });
+
+  if (!category) {
+    return res.status(400).json({
+      success: false,
+      message: 'Selected category does not exist'
+    });
+  }
+
+  productData.category = category.slug;
 
   // Check if product with same name already exists
   const existingProduct = await Product.findOne({ 
@@ -389,7 +429,7 @@ export const createProductSchema = Joi.object({
   description: Joi.string().max(500).trim().required(),
   price: Joi.number().min(0).required(),
   originalPrice: Joi.number().min(0),
-  category: Joi.string().valid('fruits', 'vegetables', 'dried-fruits', 'juices', 'gift-packs').required(),
+  category: Joi.string().trim().required(),
   subcategory: Joi.string().trim(),
   images: Joi.array().items(Joi.string()).min(1).required(),
   badge: Joi.string().valid('seasonal', 'imported', 'organic', 'sale', 'new', 'popular'),
@@ -414,7 +454,7 @@ export const updateProductSchema = Joi.object({
   description: Joi.string().max(500).trim(),
   price: Joi.number().min(0),
   originalPrice: Joi.number().min(0),
-  category: Joi.string().valid('fruits', 'vegetables', 'dried-fruits', 'juices', 'gift-packs'),
+  category: Joi.string().trim(),
   subcategory: Joi.string().trim(),
   images: Joi.array().items(Joi.string()),
   badge: Joi.string().valid('seasonal', 'imported', 'organic', 'sale', 'new', 'popular'),

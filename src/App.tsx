@@ -22,6 +22,7 @@ import Offers from "./pages/Offers";
 import AdminStock from "./pages/AdminStock";
 import AdminOrders from "./pages/AdminOrders";
 import AdminWarehouses from "./pages/AdminWarehouses";
+import AdminCategories from "./pages/AdminCategories";
 import TrackOrder from "./pages/TrackOrder";
 import NotFound from "./pages/NotFound";
 
@@ -90,6 +91,14 @@ const App = () => {
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminWarehouses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/categories"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminCategories />
                   </ProtectedRoute>
                 }
               />

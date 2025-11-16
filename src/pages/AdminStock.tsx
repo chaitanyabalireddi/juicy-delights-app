@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,13 @@ interface Product {
     minThreshold: number;
   };
   category: string;
+}
+
+interface CategoryOption {
+  _id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
 }
 
 interface UploadResponse {
@@ -64,6 +71,9 @@ const AdminStock = () => {
   const [nameValue, setNameValue] = useState<string>('');
   const [descriptionValue, setDescriptionValue] = useState<string>('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -80,13 +90,28 @@ const AdminStock = () => {
   const [isUploadingNewImages, setIsUploadingNewImages] = useState(false);
   const [isUploadingEditImages, setIsUploadingEditImages] = useState(false);
 
+  const categoryMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach((category) => {
+      map[category.slug] = category.name;
+    });
+    return map;
+  }, [categories]);
+
   useEffect(() => {
     if (!isAdmin) {
       navigate('/login');
       return;
     }
     fetchProducts();
+    fetchCategories();
   }, [isAdmin, navigate]);
+
+  useEffect(() => {
+    if (!isAddingProduct && categories.length > 0 && !newProduct.category) {
+      setNewProduct((prev) => ({ ...prev, category: categories[0].slug }));
+    }
+  }, [categories, isAddingProduct, newProduct.category]);
 
   const fetchProducts = async () => {
     try {
@@ -101,6 +126,23 @@ const AdminStock = () => {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await api.get<{ success: boolean; data?: { categories: CategoryOption[] } }>(
+        '/categories?includeInactive=true',
+        true
+      );
+      setCategories(response?.data?.categories || []);
+      setCategoryError(null);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategoryError('Failed to load categories');
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -398,18 +440,31 @@ const AdminStock = () => {
                     <Select
                       value={newProduct.category || undefined}
                       onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}
+                      disabled={categoriesLoading || categories.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue
+                          placeholder={
+                            categoriesLoading
+                              ? 'Loading categories...'
+                              : categories.length === 0
+                              ? 'No categories available'
+                              : 'Select a category'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fruits">Fruits</SelectItem>
-                        <SelectItem value="vegetables">Vegetables</SelectItem>
-                        <SelectItem value="dried-fruits">Dried Fruits</SelectItem>
-                        <SelectItem value="juices">Juices</SelectItem>
-                        <SelectItem value="gift-packs">Gift Packs</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category._id} value={category.slug}>
+                            {category.name}
+                            {!category.isActive ? ' (Hidden)' : ''}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {categoryError && (
+                      <p className="text-xs text-destructive mt-1">{categoryError}</p>
+                    )}
                   </div>
                   <div>
                     <Label>Unit *</Label>
@@ -659,7 +714,9 @@ const AdminStock = () => {
                       <p className="text-sm text-gray-600 mb-1">{product.description}</p>
                     </div>
                   )}
-                  <p className="text-sm text-gray-600 mb-1">Category: {product.category}</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Category: {categoryMap[product.category] || product.category}
+                  </p>
                   
                   {/* Price Display/Edit */}
                   {editingId === product._id && editingField === 'price' ? (
