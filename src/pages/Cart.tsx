@@ -478,7 +478,7 @@ const Cart = () => {
           className="w-full bg-gradient-success text-success-foreground py-4 rounded-xl font-bold text-lg flex items-center justify-between shadow-hover hover:shadow-glow transition-all duration-300 transform hover:scale-[1.02] animate-pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={
             isPlacingOrder ||
-            (deliveryType === 'pickup' && (!selectedWarehouse || warehouses.length === 0))
+            (deliveryType === 'pickup' && (!selectedWarehouse || warehouses.length === 0)) ||
             (deliveryType === 'delivery' && !selectedAddress)
           }
         >

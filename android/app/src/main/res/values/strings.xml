@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Juicy Delights</string>
-    <string name="title_activity_main">Juicy Delights</string>
+    <string name="app_name">Fruit Jet</string>
+    <string name="title_activity_main">Fruit Jet</string>
     <string name="package_name">com.juicydelights.app</string>
     <string name="custom_url_scheme">com.juicydelights.app</string>
 </resources>
