@@ -333,6 +333,11 @@ export const getOrderTracking = asyncHandler(async (req: Request, res: Response)
 });
 
 // Validation schemas
+const coordinateSchema = Joi.object({
+  lat: Joi.number().min(-90).max(90),
+  lng: Joi.number().min(-180).max(180)
+});
+
 export const createOrderSchema = Joi.object({
   items: Joi.array().items(
     Joi.object({
@@ -347,12 +352,9 @@ export const createOrderSchema = Joi.object({
     state: Joi.string().required(),
     pincode: Joi.string().required(),
     country: Joi.string().default('India'),
-    coordinates: Joi.object({
-      lat: Joi.number().min(-90).max(90).required(),
-      lng: Joi.number().min(-180).max(180).required()
-    }),
+    coordinates: coordinateSchema.optional(),
     instructions: Joi.string().max(200)
-  }).when('deliveryType', {
+  }).unknown(true).when('deliveryType', {
     is: 'delivery',
     then: Joi.required(),
     otherwise: Joi.forbidden()
@@ -360,12 +362,9 @@ export const createOrderSchema = Joi.object({
   pickupLocation: Joi.object({
     name: Joi.string().required(),
     address: Joi.string().required(),
-    coordinates: Joi.object({
-      lat: Joi.number().min(-90).max(90).required(),
-      lng: Joi.number().min(-180).max(180).required()
-    }),
-    phone: Joi.string().required()
-  }).when('deliveryType', {
+    coordinates: coordinateSchema.optional(),
+    phone: Joi.string()
+  }).unknown(true).when('deliveryType', {
     is: 'pickup',
     then: Joi.required(),
     otherwise: Joi.forbidden()

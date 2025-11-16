@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Package, Edit2, Save, X, Image as ImageIcon, DollarSign, Plus, Trash2 } from 'lucide-react';
+import { Package, Edit2, Save, X, Image as ImageIcon, DollarSign, Plus, Trash2, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import Header from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
@@ -26,6 +26,18 @@ interface Product {
   };
   category: string;
 }
+
+interface UploadResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    url: string;
+    publicId?: string;
+    provider?: string;
+  };
+}
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) {
@@ -57,12 +69,16 @@ const AdminStock = () => {
     description: '',
     price: 0,
     originalPrice: 0,
-    category: 'fruits',
+    category: '',
     images: [] as string[],
     unit: 'kg',
     origin: 'India',
     stock: { available: 0, reserved: 0, minThreshold: 5 }
   });
+  const newImageInputRef = useRef<HTMLInputElement | null>(null);
+  const editImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingNewImages, setIsUploadingNewImages] = useState(false);
+  const [isUploadingEditImages, setIsUploadingEditImages] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -164,10 +180,10 @@ const AdminStock = () => {
 
   const handleCreateProduct = async () => {
     try {
-      if (!newProduct.name || !newProduct.description || newProduct.price <= 0 || newProduct.images.length === 0) {
+      if (!newProduct.name || !newProduct.description || newProduct.price <= 0 || newProduct.images.length === 0 || !newProduct.category) {
         toast({
           title: 'Validation Error',
-          description: 'Please fill in all required fields (name, description, price, and at least one image)',
+          description: 'Please fill in all required fields (name, description, price, category, and at least one image)',
           variant: 'destructive'
         });
         return;
@@ -181,12 +197,13 @@ const AdminStock = () => {
         description: '',
         price: 0,
         originalPrice: 0,
-        category: 'fruits',
+        category: '',
         images: [],
         unit: 'kg',
         origin: 'India',
         stock: { available: 0, reserved: 0, minThreshold: 5 }
       });
+      setNewImageUrl('');
       toast({
         title: 'Success',
         description: 'Product created successfully',
@@ -230,6 +247,76 @@ const AdminStock = () => {
 
   const removeImageUrl = (index: number) => {
     setImageUrls(imageUrls.filter((_, i) => i !== index));
+  };
+
+  const handleDeviceImageUpload = async (
+    event: ChangeEvent<HTMLInputElement>,
+    target: 'new' | 'edit'
+  ) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Only image files are supported.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const setUploadingState = target === 'new' ? setIsUploadingNewImages : setIsUploadingEditImages;
+    setUploadingState(true);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of imageFiles) {
+        if (file.size > MAX_IMAGE_SIZE) {
+          throw new Error(`${file.name} exceeds the 5MB size limit.`);
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await api.post<UploadResponse>('/uploads/product-image', formData, true);
+        if (!response.success || !response.data?.url) {
+          throw new Error(response.message || 'Failed to upload image');
+        }
+        uploadedUrls.push(response.data.url);
+      }
+
+      if (target === 'new') {
+        setNewProduct((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedUrls]
+        }));
+      } else {
+        setImageUrls((prev) => [...prev, ...uploadedUrls]);
+      }
+
+      toast({
+        title: 'Images uploaded',
+        description: `${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} added successfully.`
+      });
+    } catch (error: unknown) {
+      toast({
+        title: 'Upload failed',
+        description: getErrorMessage(error, 'Unable to upload images. Please try again.'),
+        variant: 'destructive'
+      });
+    } finally {
+      setUploadingState(false);
+      if (target === 'new' && newImageInputRef.current) {
+        newImageInputRef.current.value = '';
+      }
+      if (target === 'edit' && editImageInputRef.current) {
+        editImageInputRef.current.value = '';
+      }
+    }
   };
 
   if (loading) {
@@ -309,11 +396,11 @@ const AdminStock = () => {
                   <div>
                     <Label>Category *</Label>
                     <Select
-                      value={newProduct.category}
+                      value={newProduct.category || undefined}
                       onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="fruits">Fruits</SelectItem>
@@ -377,10 +464,43 @@ const AdminStock = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Product Images * (URLs)</Label>
-                  <div className="space-y-2">
+                  <Label>Product Images * (URLs or Uploads)</Label>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => newImageInputRef.current?.click()}
+                      disabled={isUploadingNewImages}
+                    >
+                      {isUploadingNewImages ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                      )}
+                      {isUploadingNewImages ? 'Uploading...' : 'Upload from device'}
+                    </Button>
+                    <span className="text-xs text-gray-500">
+                      or paste an image URL below
+                    </span>
+                  </div>
+                  <input
+                    ref={newImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => handleDeviceImageUpload(event, 'new')}
+                  />
+                  <div className="space-y-2 mt-3">
+                    {newProduct.images.length === 0 && (
+                      <p className="text-xs text-gray-500">No images added yet.</p>
+                    )}
                     {newProduct.images.map((url, index) => (
                       <div key={index} className="flex items-center space-x-2">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          <img src={url} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                        </div>
                         <Input value={url} readOnly className="flex-1 text-sm" />
                         <Button
                           size="sm"
@@ -612,6 +732,30 @@ const AdminStock = () => {
                   {editingId === product._id && editingField === 'images' ? (
                     <div className="mt-4 space-y-2">
                       <Label className="text-xs">Product Images</Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => editImageInputRef.current?.click()}
+                          disabled={isUploadingEditImages}
+                        >
+                          {isUploadingEditImages ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                          )}
+                          {isUploadingEditImages ? 'Uploading...' : 'Upload new image'}
+                        </Button>
+                        <span className="text-[11px] text-gray-500">Paste a URL or upload from device</span>
+                      </div>
+                      <input
+                        ref={editImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(event) => handleDeviceImageUpload(event, 'edit')}
+                      />
                       <div className="space-y-2">
                         {imageUrls.map((url, index) => (
                           <div key={index} className="flex items-center space-x-2">

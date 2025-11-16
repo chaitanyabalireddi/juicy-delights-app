@@ -6,6 +6,8 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import path from 'path';
+import fs from 'fs';
 import { config } from '@/config';
 import connectDB from '@/config/database';
 import { errorHandler, notFound } from '@/middleware/errorHandler';
@@ -16,6 +18,7 @@ import productRoutes from '@/routes/products';
 import orderRoutes from '@/routes/orders';
 import paymentRoutes from '@/routes/payments';
 import deliveryRoutes from '@/routes/delivery';
+import uploadRoutes from '@/routes/uploads';
 
 const app = express();
 const server = createServer(app);
@@ -45,6 +48,12 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+const uploadsPath = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsPath));
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
@@ -62,6 +71,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

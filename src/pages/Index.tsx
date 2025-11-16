@@ -8,31 +8,93 @@ import mangoesImg from '@/assets/mangoes.jpg';
 import applesImg from '@/assets/apples.jpg';
 import strawberriesImg from '@/assets/strawberries.jpg';
 import { useNavigate } from 'react-router-dom';
+import api from '@/lib/api';
+
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  images?: string[];
+  badge?: string;
+  category?: string;
+}
+
+interface CategorySummary {
+  name: string;
+  count: number;
+  subcategories?: string[];
+}
+
+const FALLBACK_IMAGE = '/placeholder.svg';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return fallback;
+};
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('Delivery');
-  const [api, setApi] = useState<CarouselApi>();
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productError, setProductError] = useState<string | null>(null);
+  const [categorySummaries, setCategorySummaries] = useState<CategorySummary[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!api) {
+    if (!carouselApi) {
       return;
     }
 
-    setCurrent(api.selectedScrollSnap());
+    setCurrent(carouselApi.selectedScrollSnap());
 
-    api.on("select", () => {
-      setCurrent(api.selectedScrollSnap());
+    carouselApi.on("select", () => {
+      setCurrent(carouselApi.selectedScrollSnap());
     });
-  }, [api]);
+  }, [carouselApi]);
 
-  const categories = [
-    { name: 'Bulk orders', icon: '📦' },
-    { name: 'Exotic fruits', icon: '🥝' },
-    { name: 'Gift packs', icon: '🎁' },
-    { name: 'Festive Fruits', icon: '🎊' },
-  ];
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        const response = await api.get<{ success: boolean; data?: { products: Product[] } }>('/products?limit=12');
+        const products = response?.data?.products || (Array.isArray((response as any)?.products) ? (response as any).products : []);
+        setFeaturedProducts(products);
+        setProductError(null);
+      } catch (error) {
+        setProductError(getErrorMessage(error, 'Unable to load products.'));
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const response = await api.get<{ success: boolean; data?: { categories: CategorySummary[] } }>('/products/categories');
+        const fetchedCategories = response?.data?.categories || [];
+        setCategorySummaries(fetchedCategories);
+        setCategoryError(null);
+      } catch (error) {
+        setCategoryError(getErrorMessage(error, 'Unable to load categories.'));
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+    fetchCategories();
+  }, []);
 
   const promotionalBanners = [
     {
@@ -67,35 +129,38 @@ const Index = () => {
     }
   ];
 
-  const seasonalSpecials = [
+  const fallbackProducts: Product[] = [
     {
-      id: '1',
+      _id: 'demo-mango',
       name: 'Mangoes',
       description: 'Fresh Alphonso',
       price: 150,
       originalPrice: 200,
-      image: mangoesImg,
+      images: [mangoesImg],
       badge: 'Seasonal'
     },
     {
-      id: '2', 
+      _id: 'demo-apple',
       name: 'Apples',
       description: 'Crisp Kashmiri',
       price: 120,
       originalPrice: 160,
-      image: applesImg,
+      images: [applesImg],
       badge: 'Imported'
     },
     {
-      id: '3',
+      _id: 'demo-strawberry',
       name: 'Strawberries',
       description: 'Sweet & Juicy',
       price: 120,
       originalPrice: 160,
-      image: strawberriesImg,
+      images: [strawberriesImg],
       badge: 'Imported'
     }
   ];
+
+  const productsToDisplay = featuredProducts.length > 0 ? featuredProducts : fallbackProducts;
+  const categoriesToDisplay = categorySummaries.slice(0, 8);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -132,7 +197,7 @@ const Index = () => {
         </div>
 
         {/* Promotional Banner Carousel */}
-        <Carousel setApi={setApi} className="mb-6">
+        <Carousel setApi={setCarouselApi} className="mb-6">
           <CarouselContent>
             {promotionalBanners.map((banner) => (
               <CarouselItem key={banner.id}>
@@ -153,7 +218,7 @@ const Index = () => {
                     {promotionalBanners.map((_, index) => (
                       <button
                         key={index}
-                        onClick={() => api?.scrollTo(index)}
+                        onClick={() => carouselApi?.scrollTo(index)}
                         className={`w-2 h-2 rounded-full transition-all ${
                           current === index ? 'bg-white' : 'bg-white/50'
                         }`}
@@ -179,16 +244,27 @@ const Index = () => {
             </button>
           </div>
           <div className="flex space-x-4 overflow-x-auto pb-2">
-            {categories.map((category, index) => (
-              <div key={index} className="flex flex-col items-center min-w-[80px]">
-                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-2xl mb-2">
-                  {category.icon}
+            {isLoadingCategories ? (
+              <p className="text-sm text-gray-600 px-2">Loading categories...</p>
+            ) : categoriesToDisplay.length === 0 ? (
+              <p className="text-sm text-gray-600 px-2">
+                {categoryError || 'No categories available yet.'}
+              </p>
+            ) : (
+              categoriesToDisplay.map((category, index) => (
+                <div key={`${category.name}-${index}`} className="flex flex-col items-center min-w-[100px]">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg font-semibold text-primary mb-2 shadow-sm">
+                    {category.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs text-center text-gray-700 font-medium">
+                    {category.name}
+                  </span>
+                  <span className="text-[11px] text-gray-500">
+                    {category.count} items
+                  </span>
                 </div>
-                <span className="text-xs text-center text-gray-700 font-medium">
-                  {category.name}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -199,40 +275,51 @@ const Index = () => {
             <button className="text-primary font-medium">See all</button>
           </div>
           <div className="flex space-x-4 overflow-x-auto pb-2">
-            {seasonalSpecials.map((item) => (
-              <div 
-                key={item.id} 
-                className="min-w-[160px] bg-white rounded-xl shadow-card overflow-hidden cursor-pointer"
-                onClick={() => navigate(`/product/${item.id}`)}
-              >
-                <div className="relative">
-                  <img 
-                    src={item.image} 
-                    alt={item.name}
-                    className="w-full h-24 object-cover"
-                  />
-                  <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                    item.badge === 'Seasonal' ? 'bg-orange text-orange-foreground' : 'bg-red-500 text-white'
-                  }`}>
-                    {item.badge}
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h4 className="font-semibold text-gray-900 mb-1">{item.name}</h4>
-                  <p className="text-xs text-gray-600 mb-2">{item.description}</p>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-gray-900">₹{item.price}</span>
-                      <span className="text-xs text-gray-500 line-through ml-1">₹{item.originalPrice}</span>
+            {isLoadingProducts ? (
+              <div className="text-sm text-gray-600 px-2">Loading products...</div>
+            ) : (
+              productsToDisplay.map((item) => (
+                <div 
+                  key={item._id} 
+                  className="min-w-[160px] bg-white rounded-xl shadow-card overflow-hidden cursor-pointer"
+                  onClick={() => navigate(`/product/${item._id}`)}
+                >
+                  <div className="relative">
+                    <img 
+                      src={item.images && item.images.length > 0 ? item.images[0] : FALLBACK_IMAGE} 
+                      alt={item.name}
+                      className="w-full h-24 object-cover"
+                    />
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                      item.badge?.toLowerCase() === 'seasonal'
+                        ? 'bg-orange text-orange-foreground'
+                        : 'bg-primary text-primary-foreground'
+                    }`}>
+                      {item.badge || 'Fresh'}
                     </div>
-                    <Button variant="fab" size="xs">
-                      <span className="text-sm font-bold">+</span>
-                    </Button>
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-semibold text-gray-900 mb-1">{item.name}</h4>
+                    <p className="text-xs text-gray-600 mb-2">{item.description}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-gray-900">₹{item.price}</span>
+                        {item.originalPrice && item.originalPrice > item.price && (
+                          <span className="text-xs text-gray-500 line-through ml-1">₹{item.originalPrice}</span>
+                        )}
+                      </div>
+                      <Button variant="fab" size="xs">
+                        <span className="text-sm font-bold">+</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
+          {productError && featuredProducts.length === 0 && !isLoadingProducts && (
+            <p className="text-xs text-red-600 mt-2">{productError}</p>
+          )}
         </div>
       </div>
 

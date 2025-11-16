@@ -7,6 +7,20 @@ interface FetchOptions extends RequestInit {
   requiresAuth?: boolean;
 }
 
+const isFormDataBody = (body: BodyInit | null | undefined): body is FormData => {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+};
+
+const prepareBody = (data?: unknown) => {
+  if (data === undefined || data === null) {
+    return undefined;
+  }
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    return data;
+  }
+  return JSON.stringify(data);
+};
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -27,7 +41,7 @@ export const api = {
     const token = localStorage.getItem('authToken');
     
     const defaultHeaders: HeadersInit = {
-      'Content-Type': 'application/json',
+      ...(isFormDataBody(fetchOptions.body) ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     };
 
@@ -66,7 +80,7 @@ export const api = {
   post<T>(endpoint: string, data?: unknown, requiresAuth = false) {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: prepareBody(data),
       requiresAuth,
     });
   },
@@ -74,7 +88,7 @@ export const api = {
   put<T>(endpoint: string, data?: unknown, requiresAuth = false) {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: prepareBody(data),
       requiresAuth,
     });
   },

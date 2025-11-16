@@ -31,9 +31,33 @@ const Cart = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const warehouses = [
-    { id: '1', name: 'Green Valley Warehouse', address: '123 Main St', distance: '0.8 km', eta: '5-10 min' },
-    { id: '2', name: 'Fresh Hub Central', address: '456 Oak Ave', distance: '1.2 km', eta: '8-15 min' },
-    { id: '3', name: 'Fruit Express Station', address: '789 Pine Rd', distance: '2.1 km', eta: '12-20 min' },
+    { 
+      id: '1',
+      name: 'Green Valley Warehouse',
+      address: '123 Main St, Hyderabad',
+      distance: '0.8 km',
+      eta: '5-10 min',
+      phone: '+91 98765 43210',
+      coordinates: { lat: 17.385, lng: 78.4867 }
+    },
+    { 
+      id: '2',
+      name: 'Fresh Hub Central',
+      address: '456 Oak Ave, Hyderabad',
+      distance: '1.2 km',
+      eta: '8-15 min',
+      phone: '+91 99887 66554',
+      coordinates: { lat: 17.391, lng: 78.48 }
+    },
+    { 
+      id: '3',
+      name: 'Fruit Express Station',
+      address: '789 Pine Rd, Hyderabad',
+      distance: '2.1 km',
+      eta: '12-20 min',
+      phone: '+91 91234 56789',
+      coordinates: { lat: 17.39, lng: 78.5 }
+    },
   ];
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -96,9 +120,18 @@ const Cart = () => {
         ...(deliveryType === 'delivery' && selectedAddress ? {
           deliveryAddress: selectedAddress
         } : {}),
-        ...(deliveryType === 'pickup' && selectedWarehouse ? {
-          pickupLocation: warehouses.find(w => w.id === selectedWarehouse)
-        } : {})
+        ...(deliveryType === 'pickup' && selectedWarehouse ? (() => {
+          const warehouse = warehouses.find(w => w.id === selectedWarehouse);
+          if (!warehouse) return {};
+          return {
+            pickupLocation: {
+              name: warehouse.name,
+              address: warehouse.address,
+              phone: warehouse.phone,
+              coordinates: warehouse.coordinates
+            }
+          };
+        })() : {})
       };
 
       const response = await api.post('/orders', orderData, true);
