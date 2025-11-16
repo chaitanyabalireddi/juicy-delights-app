@@ -22,16 +22,20 @@ export const uploadProductImage = asyncHandler(async (req: Request, res: Respons
   const { buffer, mimetype, originalname } = req.file;
 
   if (isCloudinaryConfigured()) {
-    const result = await uploadImageBuffer(buffer, mimetype);
-    return res.json({
-      success: true,
-      message: 'Image uploaded successfully',
-      data: {
-        url: result.secure_url,
-        publicId: result.public_id,
-        provider: 'cloudinary'
-      }
-    });
+    try {
+      const result = await uploadImageBuffer(buffer, mimetype);
+      return res.json({
+        success: true,
+        message: 'Image uploaded successfully',
+        data: {
+          url: result.secure_url,
+          publicId: result.public_id,
+          provider: 'cloudinary'
+        }
+      });
+    } catch (error) {
+      console.error('Cloudinary upload failed, falling back to local storage:', error);
+    }
   }
 
   await ensureUploadsDir();

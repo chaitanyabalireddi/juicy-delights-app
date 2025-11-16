@@ -203,13 +203,6 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 mb-2 font-semibold">Demo Credentials:</p>
-            <p className="text-xs text-gray-500">Admin: admin@juicydelights.com / admin123</p>
-            <p className="text-xs text-gray-500">User: customer@example.com / customer123</p>
-          </div>
-
           {/* Skip Login (for testing) */}
           <button
             onClick={() => navigate('/')}

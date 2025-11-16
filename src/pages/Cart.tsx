@@ -1,6 +1,6 @@
 import { ArrowLeft, Minus, Plus, MapPin, Clock, Truck, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useCart } from '@/contexts/CartContext';
 import AddressManagement from '@/components/AddressManagement';
@@ -21,44 +21,59 @@ interface SelectedAddress {
   };
 }
 
+interface Warehouse {
+  _id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  phone: string;
+  distance?: string;
+  eta?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
 const Cart = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useCart();
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(true);
+  const [warehousesError, setWarehousesError] = useState<string | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  const warehouses = [
-    { 
-      id: '1',
-      name: 'Green Valley Warehouse',
-      address: '123 Main St, Hyderabad',
-      distance: '0.8 km',
-      eta: '5-10 min',
-      phone: '+91 98765 43210',
-      coordinates: { lat: 17.385, lng: 78.4867 }
-    },
-    { 
-      id: '2',
-      name: 'Fresh Hub Central',
-      address: '456 Oak Ave, Hyderabad',
-      distance: '1.2 km',
-      eta: '8-15 min',
-      phone: '+91 99887 66554',
-      coordinates: { lat: 17.391, lng: 78.48 }
-    },
-    { 
-      id: '3',
-      name: 'Fruit Express Station',
-      address: '789 Pine Rd, Hyderabad',
-      distance: '2.1 km',
-      eta: '12-20 min',
-      phone: '+91 91234 56789',
-      coordinates: { lat: 17.39, lng: 78.5 }
-    },
-  ];
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        setWarehousesLoading(true);
+        const response = await api.get<{ success: boolean; data?: { warehouses: Warehouse[] } }>(
+          '/warehouses'
+        );
+        const fetched = response?.data?.warehouses || [];
+        setWarehouses(fetched);
+        setWarehousesError(null);
+      } catch (error) {
+        console.error('Failed to load warehouses', error);
+        setWarehousesError('Unable to load pickup locations right now.');
+      } finally {
+        setWarehousesLoading(false);
+      }
+    };
+    fetchWarehouses();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedWarehouse && warehouses.length > 0) {
+      setSelectedWarehouse(warehouses[0]._id);
+    }
+  }, [warehouses, selectedWarehouse]);
 
   const updateQuantity = (id: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
@@ -112,14 +127,17 @@ const Cart = () => {
           deliveryAddress: selectedAddress
         } : {}),
         ...(deliveryType === 'pickup' && selectedWarehouse ? (() => {
-          const warehouse = warehouses.find(w => w.id === selectedWarehouse);
-          if (!warehouse) return {};
+          const warehouse = warehouses.find(w => w._id === selectedWarehouse);
+          if (!warehouse) {
+            throw new Error('Selected pickup location not found. Please refresh and try again.');
+          }
           return {
             pickupLocation: {
               name: warehouse.name,
-              address: warehouse.address,
+              address: `${warehouse.address}, ${warehouse.city}, ${warehouse.state} ${warehouse.pincode}`,
               phone: warehouse.phone,
-              coordinates: warehouse.coordinates
+              coordinates: warehouse.coordinates,
+              warehouseId: warehouse._id
             }
           };
         })() : {})
@@ -345,41 +363,57 @@ const Cart = () => {
             </button>
           </div>
 
-          {deliveryType === 'pickup' && (
+        {deliveryType === 'pickup' && (
             <div className="space-y-3 animate-slide-up">
               <h4 className="font-semibold text-foreground">Select Pickup Location</h4>
-              {warehouses.map((warehouse) => (
+            {warehousesLoading ? (
+              <p className="text-sm text-muted-foreground">Loading pickup locations...</p>
+            ) : warehousesError ? (
+              <p className="text-sm text-destructive">{warehousesError}</p>
+            ) : warehouses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No pickup locations available yet. Please choose delivery or contact support.
+              </p>
+            ) : (
+              warehouses.map((warehouse) => (
                 <button
-                  key={warehouse.id}
-                  onClick={() => setSelectedWarehouse(warehouse.id)}
+                  key={warehouse._id}
+                  onClick={() => setSelectedWarehouse(warehouse._id)}
                   className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                    selectedWarehouse === warehouse.id
-                    ? 'border-success bg-success/10 shadow-glow'
-                    : 'border-border bg-background hover:border-success/50'
+                    selectedWarehouse === warehouse._id
+                      ? 'border-success bg-success/10 shadow-glow'
+                      : 'border-border bg-background hover:border-success/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <h5 className="font-semibold text-foreground">{warehouse.name}</h5>
-                      <p className="text-sm text-muted-foreground">{warehouse.address}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {warehouse.address}, {warehouse.city}
+                      </p>
                       <div className="flex items-center space-x-4 mt-2">
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-medium">
-                          {warehouse.distance}
-                        </span>
-                        <span className="text-xs flex items-center space-x-1 text-muted-foreground">
-                          <Clock size={12} />
-                          <span>{warehouse.eta}</span>
-                        </span>
+                        {warehouse.distance && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-medium">
+                            {warehouse.distance}
+                          </span>
+                        )}
+                        {warehouse.eta && (
+                          <span className="text-xs flex items-center space-x-1 text-muted-foreground">
+                            <Clock size={12} />
+                            <span>{warehouse.eta}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {selectedWarehouse === warehouse.id && (
+                    {selectedWarehouse === warehouse._id && (
                       <div className="w-6 h-6 bg-success rounded-full flex items-center justify-center animate-bounce-in">
                         <span className="text-success-foreground text-sm">✓</span>
                       </div>
                     )}
                   </div>
                 </button>
-              ))}
+              ))
+            )}
             </div>
           )}
         </div>
@@ -444,7 +478,7 @@ const Cart = () => {
           className="w-full bg-gradient-success text-success-foreground py-4 rounded-xl font-bold text-lg flex items-center justify-between shadow-hover hover:shadow-glow transition-all duration-300 transform hover:scale-[1.02] animate-pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={
             isPlacingOrder ||
-            (deliveryType === 'pickup' && !selectedWarehouse) ||
+            (deliveryType === 'pickup' && (!selectedWarehouse || warehouses.length === 0))
             (deliveryType === 'delivery' && !selectedAddress)
           }
         >

@@ -18,6 +18,7 @@ import productRoutes from '@/routes/products';
 import orderRoutes from '@/routes/orders';
 import paymentRoutes from '@/routes/payments';
 import deliveryRoutes from '@/routes/delivery';
+import warehouseRoutes from '@/routes/warehouses';
 import uploadRoutes from '@/routes/uploads';
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/uploads', uploadRoutes);
 
 // Health check endpoint
