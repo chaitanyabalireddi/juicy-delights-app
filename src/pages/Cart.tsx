@@ -104,17 +104,8 @@ const Cart = () => {
       const orderData = {
         items: state.items.map(item => ({
           product: item.id,
-          name: item.name,
-          price: item.price,
           quantity: item.quantity,
-          unit: 'kg',
-          image: item.image
         })),
-        subtotal: state.total,
-        deliveryFee: deliveryType === 'pickup' ? 10 : state.deliveryFee,
-        serviceFee: 0,
-        discount: 0,
-        total: state.total + (deliveryType === 'pickup' ? 10 : state.deliveryFee),
         paymentMethod: 'cod',
         deliveryType,
         ...(deliveryType === 'delivery' && selectedAddress ? {
