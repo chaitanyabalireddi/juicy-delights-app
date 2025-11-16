@@ -119,10 +119,13 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
 // Get user orders
 export const getUserOrders = asyncHandler(async (req: Request, res: Response) => {
-  const customerId = (req as any).user._id;
+  const user = (req as any).user;
   const { page = 1, limit = 10, status } = req.query;
 
-  const query: any = { customer: customerId };
+  const query: any = {};
+  if (user.role !== 'admin') {
+    query.customer = user._id;
+  }
   if (status) query.status = status;
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -133,6 +136,7 @@ export const getUserOrders = asyncHandler(async (req: Request, res: Response) =>
       .skip(skip)
       .limit(Number(limit))
       .populate('deliveryPerson', 'name phone')
+      .populate('customer', 'name email phone')
       .lean(),
     Order.countDocuments(query)
   ]);
@@ -155,12 +159,14 @@ export const getUserOrders = asyncHandler(async (req: Request, res: Response) =>
 // Get single order
 export const getOrder = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const customerId = (req as any).user._id;
+  const user = (req as any).user;
 
-  const order = await Order.findOne({
-    _id: id,
-    customer: customerId
-  })
+  const query: any = { _id: id };
+  if (user.role !== 'admin') {
+    query.customer = user._id;
+  }
+
+  const order = await Order.findOne(query)
     .populate('deliveryPerson', 'name phone')
     .populate('customer', 'name email phone');
 
