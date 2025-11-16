@@ -12,6 +12,10 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
+  if (config.email.disabled) {
+    console.log('Email disabled, skipping send:', subject);
+    return null;
+  }
   try {
     const mailOptions = {
       from: `"Juicy Delights" <${config.email.user}>`,
@@ -30,6 +34,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
 };
 
 export const sendWelcomeEmail = async (email: string, name: string) => {
+  if (config.email.disabled) return null;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1 style="color: #ff6b35;">Welcome to Juicy Delights!</h1>
@@ -53,6 +58,7 @@ export const sendWelcomeEmail = async (email: string, name: string) => {
 };
 
 export const sendOrderConfirmationEmail = async (email: string, name: string, orderNumber: string, total: number) => {
+  if (config.email.disabled) return null;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1 style="color: #ff6b35;">Order Confirmed!</h1>
@@ -73,6 +79,7 @@ export const sendOrderConfirmationEmail = async (email: string, name: string, or
 };
 
 export const sendDeliveryUpdateEmail = async (email: string, name: string, orderNumber: string, status: string) => {
+  if (config.email.disabled) return null;
   const statusMessages = {
     'preparing': 'Your order is being prepared',
     'ready': 'Your order is ready for pickup',

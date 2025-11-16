@@ -7,6 +7,7 @@ import User from '@/models/User';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { sendOrderConfirmationEmail, sendDeliveryUpdateEmail } from '@/utils/email';
 import { sendOrderConfirmationSMS, sendDeliveryUpdateSMS } from '@/utils/sms';
+import { config } from '@/config';
 import Joi from 'joi';
 
 // Create new order
@@ -92,7 +93,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
   // Send confirmation notifications
   const customer = await User.findById(customerId);
-  if (customer) {
+  if (customer && !config.email.disabled) {
     try {
       await sendOrderConfirmationEmail(customer.email, customer.name, order.orderNumber, total);
       await sendOrderConfirmationSMS(customer.phone, order.orderNumber, total);
@@ -212,7 +213,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   );
 
   // Send notifications
-  if (order.customer) {
+  if (order.customer && !config.email.disabled) {
     try {
       await sendDeliveryUpdateEmail(
         order.customer.email,
